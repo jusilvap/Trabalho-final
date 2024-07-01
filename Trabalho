@@ -1,0 +1,223 @@
+using System;
+using System.IO;
+
+class Program
+{
+    static string[] produtos; // Array para armazenar os nomes dos produtos
+    static int[] estoque;     // Array para armazenar a quantidade em estoque de cada produto
+    static int[,] vendas;     // Matriz para armazenar as vendas diárias de cada produto
+
+    static void Main()
+    {
+        bool sair = false;
+        while (!sair)
+        {
+            Console.WriteLine("Menu Principal:");
+            Console.WriteLine("1 - Importar arquivo de produtos");
+            Console.WriteLine("2 - Registrar venda");
+            Console.WriteLine("3 - Relatório de vendas");
+            Console.WriteLine("4 - Relatório de estoque");
+            Console.WriteLine("5 - Criar arquivo de vendas");
+            Console.WriteLine("6 - Sair");
+            Console.Write("Escolha uma opção: ");
+
+            int opcao;
+            if (int.TryParse(Console.ReadLine(), out opcao))
+            {
+                switch (opcao)
+                {
+                    case 1:
+                        ImportarArquivoProdutos();
+                        break;
+                    case 2:
+                        RegistrarVenda();
+                        break;
+                    case 3:
+                        RelatorioVendas();
+                        break;
+                    case 4:
+                        RelatorioEstoque();
+                        break;
+                    case 5:
+                        CriarArquivoVendas();
+                        break;
+                    case 6:
+                        sair = true;
+                        Console.WriteLine("Saindo do programa...");
+                        break;
+                    default:
+                        Console.WriteLine("Opção inválida. Tente novamente.");
+                        break;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Opção inválida. Tente novamente.");
+            }
+
+            Console.WriteLine();
+        }
+    }
+
+    static void ImportarArquivoProdutos()
+    {
+        string filePath = "produtos.txt"; // Nome do arquivo de produtos (altere conforme necessário)
+
+        try
+        {
+            string[] linhas = File.ReadAllLines(filePath);
+            int numProdutos = linhas.Length;
+            produtos = new string[numProdutos];
+            estoque = new int[numProdutos];
+            vendas = new int[numProdutos, 30]; // Assumindo um mês de 30 dias
+
+            for (int i = 0; i < numProdutos; i++)
+            {
+                string[] dados = linhas[i].Split(' ');
+                produtos[i] = dados[0];
+                estoque[i] = int.Parse(dados[1]);
+            }
+
+            Console.WriteLine("Arquivo de produtos importado com sucesso.");
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine($"Erro ao ler o arquivo: {e.Message}");
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine("Formato inválido no arquivo de produtos.");
+        }
+    }
+
+    static void RegistrarVenda()
+    {
+        if (produtos == null)
+        {
+            Console.WriteLine("Primeiro importe o arquivo de produtos.");
+            return;
+        }
+
+        Console.Write("Digite o número do produto (1 a 4): ");
+        int numProduto = int.Parse(Console.ReadLine()) - 1;
+
+        if (numProduto < 0 || numProduto >= produtos.Length)
+        {
+            Console.WriteLine("Número de produto inválido.");
+            return;
+        }
+
+        Console.Write("Digite o dia do mês (1 a 30): ");
+        int dia = int.Parse(Console.ReadLine()) - 1;
+
+        if (dia < 0 || dia >= 30)
+        {
+            Console.WriteLine("Dia inválido.");
+            return;
+        }
+
+        Console.Write("Digite a quantidade vendida: ");
+        int quantidadeVendida = int.Parse(Console.ReadLine());
+
+        if (quantidadeVendida <= 0)
+        {
+            Console.WriteLine("Quantidade vendida deve ser maior que zero.");
+            return;
+        }
+
+        if (quantidadeVendida > estoque[numProduto])
+        {
+            Console.WriteLine("Não há estoque suficiente para realizar essa venda.");
+            return;
+        }
+
+        // Registrar a venda na matriz de vendas
+        vendas[numProduto, dia] += quantidadeVendida;
+        estoque[numProduto] -= quantidadeVendida;
+
+        Console.WriteLine("Venda registrada com sucesso.");
+    }
+
+    static void RelatorioVendas()
+    {
+        if (produtos == null)
+        {
+            Console.WriteLine("Primeiro importe o arquivo de produtos.");
+            return;
+        }
+
+        Console.WriteLine("Relatório de vendas no mês:");
+
+        // Imprimir cabeçalho com nomes dos produtos
+        Console.Write("        ");
+        for (int i = 0; i < produtos.Length; i++)
+        {
+            Console.Write($"{produtos[i],10}");
+        }
+        Console.WriteLine();
+
+        // Imprimir vendas por dia
+        for (int dia = 0; dia < 30; dia++)
+        {
+            Console.Write($"Dia {dia + 1,2}: ");
+            for (int produto = 0; produto < produtos.Length; produto++)
+            {
+                Console.Write($"{vendas[produto, dia],10}");
+            }
+            Console.WriteLine();
+        }
+    }
+
+    static void RelatorioEstoque()
+    {
+        if (produtos == null)
+        {
+            Console.WriteLine("Primeiro importe o arquivo de produtos.");
+            return;
+        }
+
+        Console.WriteLine("Relatório de estoque atual:");
+
+        // Imprimir nome do produto e quantidade em estoque
+        for (int i = 0; i < produtos.Length; i++)
+        {
+            Console.WriteLine($"{produtos[i],-10} {estoque[i]}");
+        }
+    }
+
+    static void CriarArquivoVendas()
+    {
+        if (produtos == null)
+        {
+            Console.WriteLine("Primeiro importe o arquivo de produtos.");
+            return;
+        }
+
+        string filePath = "vendas_por_produto.txt"; // Nome do arquivo de vendas (altere conforme necessário)
+
+        try
+        {
+            using (StreamWriter writer = new StreamWriter(filePath))
+            {
+                writer.WriteLine("Total de vendas por produto:");
+
+                // Escrever total de vendas por produto
+                for (int i = 0; i < produtos.Length; i++)
+                {
+                    int totalVendas = 0;
+                    for (int dia = 0; dia < 30; dia++)
+                    {
+                        totalVendas += vendas[i, dia];
+                    }
+                    writer.WriteLine($"{produtos[i]} {totalVendas}");
+                }
+            }
+
+            Console.WriteLine($"Arquivo de vendas criado com sucesso: {filePath}");
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine($"Erro ao escrever o arquivo: {e.Message}");
+        }
+    }
+}
